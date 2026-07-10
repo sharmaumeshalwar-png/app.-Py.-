@@ -3,11 +3,12 @@ import numpy as np
 import pandas as pd
 import yfinance as yf
 from sklearn.ensemble import RandomForestClassifier
+from datetime import datetime, timedelta
 
 # Page Configuration
 st.set_page_config(page_title="Nifty Original Core Engine", layout="wide")
-st.title("⚡ Nifty 50 Live 1-Hour Standalone [Core Clean Engine]")
-st.write("🎯 **Aapki Custom Setting:** Strictly Only NIFTY 1-Hour Data + 2-Year Range + 50:50 Split + **VWAP completely REMOVED** + ML Score $[-5,5]$ + **Target & Hour Horizon Columns Completely Removed** + Latest Active Candle Locked on Top")
+st.title("⚡ Nifty 50 Live 1-Hour Standalone [Strict Live Flow Override]")
+st.write("🎯 **Aapki Custom Setting:** Date Range Exclusive Fix (+1 Day Buffer) + 50:50 Train-Predict Split + **VWAP completely REMOVED** + ML Score $[-5,5]$ + No Target/Hour Columns + Latest Active Candle Locked on Top")
 
 # =====================================================================
 # MATHEMATICAL ENGINE (Flexible Kalman Filter Function)
@@ -28,12 +29,24 @@ def apply_kalman_filter_custom(data_array, initial_p=50.0, q_val=0.001, r_val=0.
         filtered_values.append(x)
     return filtered_values
 
-with st.spinner("Restoring Your Original Stable Core Data Engine for Nifty..."):
-    # STRICT 2-YEAR (730d) RANGE + 1-HOUR INTERVAL DATA (Ticker: ^NSEI)
-    raw_df = yf.download("^NSEI", period="730d", interval="1h")
+with st.spinner("Executing Strict Live Data Fetch for Nifty..."):
+    # -----------------------------------------------------------------
+    # HARDCODED DATE CALCULATOR: Adding +1 Day Buffer to catch TODAY's live candles
+    # -----------------------------------------------------------------
+    current_time = datetime.now()
+    start_date = current_time - timedelta(days=720) 
+    
+    # +1 Day shift taaki Yahoo Finance aaj ka pura live data include kare
+    end_date = current_time + timedelta(days=1) 
+    
+    start_str = start_date.strftime('%Y-%m-%d')
+    end_str = end_date.strftime('%Y-%m-%d')
+
+    # Fetch using exact buffered date boundaries
+    raw_df = yf.download("^NSEI", start=start_str, end=end_str, interval="1h")
     
     if len(raw_df) == 0:
-        st.error("YFinance API Timeout or Market Closed Data Error. Please refresh the dashboard.")
+        st.error(f"YFinance API Limit Error for range {start_str} to {end_str}. Please refresh.")
         st.stop()
         
     df = pd.DataFrame(index=raw_df.index)
