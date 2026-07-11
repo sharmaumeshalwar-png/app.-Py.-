@@ -42,8 +42,8 @@ with st.spinner("Executing Strict Live Data Fetch for Nifty..."):
     start_str = start_date.strftime('%Y-%m-%d')
     end_str = end_date.strftime('%Y-%m-%d')
 
-    # Fetch using exact buffered date boundaries
-    raw_df = yf.download("^NSEI", start=start_str, end=end_str, interval="1h")
+    # Fetch using exact buffered date boundaries (Ticker changed to BTC-USD)
+    raw_df = yf.download("BTC-USD", start=start_str, end=end_str, interval="1h")
     
     if len(raw_df) == 0:
         st.error(f"YFinance API Limit Error for range {start_str} to {end_str}. Please refresh.")
