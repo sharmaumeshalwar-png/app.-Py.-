@@ -6,7 +6,7 @@ import yfinance as yf
 # Page Configuration
 st.set_page_config(page_title="BTC Master Kinematics Engine", layout="wide")
 st.title("⚡ Bitcoin (BTC-USD) Pure Kinematic Action Master Engine")
-st.write("🎯 **Pure Direct Crypto Signals:** 50:50 Split 1-Hour Candle Leak-Free Execution Matrix")
+st.write("🎯 **Pure Direct Crypto Signals:** 50:50 Split 1-Hour Candle Leak-Free Execution Matrix with Heikin-Ashi")
 
 # =====================================================================
 # MATHEMATICAL ENGINES (Strictly Backward-Looking / No Leakage)
@@ -45,13 +45,40 @@ def calculate_rolling_hurst_leak_free(price_series, window=100):
             
     return hurst_values
 
+# =====================================================================
+# 🛠️ HEIKIN-ASHI ENGINE (Strictly Iterative / No Forward Leakage)
+# =====================================================================
+def apply_heikin_ashi(df_in):
+    """
+    Applies Heikin-Ashi transformation to standard OHLC data.
+    Ensures absolute zero leakage by computing chronologically forward.
+    """
+    ha_close = (df_in['Open'] + df_in['High'] + df_in['Low'] + df_in['Close']) / 4.0
+    
+    # Pre-allocate array for speed and consistency
+    ha_open = np.zeros(len(df_in))
+    ha_open[0] = (df_in['Open'].iloc[0] + df_in['Close'].iloc[0]) / 2.0
+    
+    # Step-by-step loop to carry over the previous candle's values cleanly
+    for i in range(1, len(df_in)):
+        ha_open[i] = (ha_open[i-1] + ha_close.iloc[i-1]) / 2.0
+        
+    ha_high = np.maximum(df_in['High'].values, np.maximum(ha_open, ha_close.values))
+    ha_low = np.minimum(df_in['Low'].values, np.minimum(ha_open, ha_close.values))
+    
+    df_out = df_in.copy()
+    df_out['HA_Open'] = ha_open
+    df_out['HA_High'] = ha_high
+    df_out['HA_Low'] = ha_low
+    df_out['HA_Close'] = ha_close
+    return df_out
+
 # -----------------------------------------------------------------
 # 🛡️ SYSTEM DATA INGESTION (BTC-USD Setup - 2y, 1h)
 # -----------------------------------------------------------------
 df = None
 with st.spinner("Fetching 2-Year Hourly Bitcoin Data from Yahoo Finance..."):
     try:
-        # Strictly 2 Years data at 1-Hour intervals
         df = yf.download(tickers="BTC-USD", period="2y", interval="1h")
         if isinstance(df.columns, pd.MultiIndex):
             df.columns = df.columns.get_level_values(0)
@@ -71,16 +98,22 @@ with st.spinner("Fetching 2-Year Hourly Bitcoin Data from Yahoo Finance..."):
         st.error(f"🚨 API Failure: {e}")
         st.stop()
 
+# =====================================================================
+# ⚡ CORE HEIKIN-ASHI CALCULATIONS (Applied before splitting or Kinematics)
+# =====================================================================
+df = apply_heikin_ashi(df)
+
 # 🔥 CRITICAL DATA SCIENCE RULE: Strict 50:50 split FIRST to secure forward vectors
 split_idx = int(len(df) * 0.50)
 df_predict = df.iloc[split_idx:].copy()
 
-st.success(f"🟢 **Synced & Secured {len(df_predict)} Pure Live Bitcoin Candles (Leak-Free Engine Active)!**")
+st.success(f"🟢 **Synced & Secured {len(df_predict)} Pure Live Bitcoin HA Candles (Leak-Free Engine Active)!**")
 
 # =====================================================================
 # ⚡ CORE PURE KINEMATICS MATRIX CALCULATIONS
 # =====================================================================
-df_predict['Close_Raw'] = df_predict['Close']
+# Switch Raw Close to Heikin-Ashi Close for the Kinematic Analysis Matrix
+df_predict['Close_Raw'] = df_predict['HA_Close']
 close_arr = df_predict['Close_Raw'].values
 
 # 1. Base Kalman System for Baseline Extraction
@@ -103,7 +136,10 @@ df_predict.dropna(subset=['Hurst'], inplace=True)
 # 📋 MATRIX FORMATTING AND UTC DISPLAY
 # =====================================================================
 clean_cols = [
-    'Close_Raw', 
+    'HA_Open',
+    'HA_High',
+    'HA_Low',
+    'HA_Close', 
     'Hurst', 
     'Weighted_Momentum', 
     'Hurst_Amp_Momentum'
@@ -118,5 +154,5 @@ for c in clean_cols:
 display_df = display_df.iloc[::-1]
 display_df.index = display_df.index.strftime('%Y-%m-%d %H:%M UTC')
 
-st.subheader("📋 50:50 Split Pure Kinematic Analysis Matrix")
+st.subheader("📋 50:50 Split Pure Kinematic Analysis Matrix (Heikin-Ashi Focus)")
 st.dataframe(display_df, use_container_width=True, height=650)
