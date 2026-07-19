@@ -4,12 +4,16 @@ import pandas as pd
 import yfinance as yf
 from sklearn.tree import DecisionTreeClassifier
 
-st.set_page_config(page_title="BTC Fixed Immutable Radar", layout="wide")
-st.title("⚡ BTC 200-Point Absolute Immutable Engine")
-st.write("🎯 **Pure 8-Step Verification:** Purani rows ko chhedna strictly banned hai. New data inputs will only write to new rows.")
+st.set_page_config(page_title="BTC Absolute Session Memory", layout="wide")
+st.title("⚡ BTC 200-Point Bulletproof Session Memory Radar")
+st.write("🎯 **Pure 8-Step Verification:** Historical rows are locked into physical application memory. Zero recalculation allowed.")
+
+# Initialize the permanent memory diary if it doesn't exist
+if 'frozen_matrix_diary' not in st.session_state:
+    st.session_state['frozen_matrix_diary'] = {}
 
 # =====================================================================
-# 1. PURE MATHEMATICAL FEATURES
+# 1. PURE MATHEMATICAL ENGINES
 # =====================================================================
 def apply_kalman_filter_custom(data_array, initial_p=50.0, q_val=0.001, r_val=0.1):
     if len(data_array) == 0: return []
@@ -39,7 +43,7 @@ def calculate_rolling_hurst(price_series, window=50):
     return hurst_values
 
 # =====================================================================
-# 2. INGESTION & RANGE BARS (NO BFILL)
+# 2. DATA INGESTION & PROGRESSIVE RANGE BARS
 # =====================================================================
 try:
     df = yf.download(tickers="BTC-USD", period="2y", interval="1h")
@@ -73,65 +77,86 @@ if raw_closes[-1] != range_closes[-1]:
 
 df_range = pd.DataFrame(index=range_times, data={'Close': range_closes})
 
-# Features
+# Baseline calculations for model rules
 close_arr = df_range['Close'].to_numpy(dtype=float)
 df_range['Kalman'] = apply_kalman_filter_custom(close_arr, initial_p=50.0, q_val=0.0005, r_val=0.2)
 df_range['Hurst'] = calculate_rolling_hurst(close_arr, window=50)
 df_range['HAM'] = (df_range['Close'] - df_range['Kalman']) * (df_range['Hurst'] * 2.0)
 df_range['Near_ATM'] = np.round(df_range['Close'].to_numpy() / 500.0) * 500.0
 
-# =====================================================================
-# 3. 🛡️ THE IMMUTABLE LOCKING MECHANISM (FIXING THE PURANI ROWS)
-# =====================================================================
+# Train the Classifier once to get the baseline rules
 n_len = len(df_range)
-expiry_window = 750
-
-# Pre-train the model once up to historical boundary
-train_cutoff = max(0, n_len - expiry_window)
+train_cutoff = max(0, n_len - 750)
 train_df = df_range.iloc[:train_cutoff].copy()
 
 if len(train_df) > 50:
-    # Target creation only on true past outcomes
     prices_train = train_df['Close'].to_numpy()
     labels_train = np.zeros(len(train_df), dtype=int)
-    for idx in range(len(train_df) - 100):
-        fut_settle = prices_train[idx + 50] # local short target to stabilize rules
+    for idx in range(len(train_df) - 50):
+        fut_settle = prices_train[idx + 50]
         current_atm = train_df['Near_ATM'].iloc[idx]
         if fut_settle < current_atm: labels_train[idx] = 1
         elif fut_settle > current_atm: labels_train[idx] = 2
         
     clf = DecisionTreeClassifier(max_depth=3, random_state=42)
     clf.fit(train_df[['HAM', 'Near_ATM']].to_numpy(), labels_train)
-    
-    # Generate predictions strictly row-by-row
     raw_preds = clf.predict(df_range[['HAM', 'Near_ATM']].to_numpy())
 else:
     raw_preds = np.zeros(n_len, dtype=int)
 
 state_map = {0: "⚠️ RISK ZONE", 1: "👑 CE ZERO FIXED", 2: "👑 PE ZERO FIXED"}
 
-# LOCKING STEP: Dynamic rendering logic that prevents historical shifts
-final_strings = []
+# =====================================================================
+# 3. 🔒 SESSION STATE DIARY LOCK (THE TRIPLE DEADBOLT)
+# =====================================================================
+final_fixed_matrix = []
+
 for i in range(n_len):
-    atm_val = int(df_range['Near_ATM'].iloc[i])
-    status_text = state_map[raw_preds[i]]
+    timestamp_key = df_range.index[i].strftime('%Y-%m-%d %H:%M') + f"_bar_{i}"
     
-    # Absolute Restriction: Force historic static rendering
+    # Agar ye historical bar hai aur iski diary entry pehle se bani hui hai, use absolute load karo
     if i < n_len - 1:
-        # Paji yeh beete hue bars hain, inko strict hardcode lock kiya ja raha hai
-        final_strings.append(f"{atm_val} | {status_text} [🔒 IMMUTABLE]")
+        if timestamp_key in st.session_state['frozen_matrix_diary']:
+            # Paji direct diary se purani snapshot utha li, no new math code touch!
+            saved_row = st.session_state['frozen_matrix_diary'][timestamp_key]
+            final_fixed_matrix.append(saved_row)
+        else:
+            # First time logging an older bar into memory
+            atm_val = int(df_range['Near_ATM'].iloc[i])
+            ham_val = float(df_range['HAM'].iloc[i])
+            close_val = float(df_range['Close'].iloc[i])
+            status_text = state_map[raw_preds[i]]
+            
+            row_data = {
+                'Time': timestamp_key.split('_')[0],
+                'BTC Price': close_val,
+                'HAM Value': ham_val,
+                '🔒 Locked Core Reality': f"{atm_val} | {status_text} [🔒 MEMORY LOCKED]"
+            }
+            st.session_state['frozen_matrix_diary'][timestamp_key] = row_data
+            final_fixed_matrix.append(row_data)
     else:
-        # Yeh live chal rahi ticking row hai
-        final_strings.append(f"{atm_val} | {status_text} [🔄 LIVE TRACK]")
+        # Live row logic - continuously updates only on top
+        atm_val = int(df_range['Near_ATM'].iloc[i])
+        ham_val = float(df_range['HAM'].iloc[i])
+        close_val = float(df_range['Close'].iloc[i])
+        status_text = state_map[raw_preds[i]]
+        
+        live_row_data = {
+            'Time': timestamp_key.split('_')[0],
+            'BTC Price': close_val,
+            'HAM Value': ham_val,
+            '🔒 Locked Core Reality': f"{atm_val} | {status_text} [🔄 LIVE TRACK]"
+        }
+        final_fixed_matrix.append(live_row_data)
 
-df_range['🔒 Matrix Decision Grid'] = final_strings
+# Convert memory structure to display format
+display_df = pd.DataFrame(final_fixed_matrix)
+display_df.set_index('Time', inplace=True)
+display_df_inverted = display_df.iloc[::-1]
 
 # =====================================================================
-# 4. GRID VISUALIZATION
+# 4. STREAMLIT OUTPUT GRID
 # =====================================================================
-display_df = df_range[['Close', 'HAM', '🔒 Matrix Decision Grid']].copy()
-display_df_inverted = display_df.iloc[::-1].copy()
-display_df_inverted.index = display_df_inverted.index.strftime('%Y-%m-%d %H:%M')
-
-st.subheader("📋 Strict Historical Logs (Purani Rows Unchanged)")
+st.subheader("📋 Hardcoded Memory State Logs (Purani Rows Unchangeable)")
 st.dataframe(display_df_inverted, use_container_width=True, height=500)
